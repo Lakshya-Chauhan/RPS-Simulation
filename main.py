@@ -7,7 +7,11 @@ class obj:
     neighbours = [[-1, -1], [-1, 0], [-1, 1],
                  [0, -1], [0, 0], [0, 1],
                  [1, -1], [1, 0], [1, 1]]
-    gfactor = 40
+    gfactor = 200   #grid size factor
+    rfactor = 40    #radius factor
+    afactor = 10069*10    #attraction factor
+    randFactor = 500  #2000   #randomness factor
+    dmin = 2
     grid = list()
     gLen = [int(screenRes[0]//gfactor), int(screenRes[1]//gfactor)]
     velLimit = 300
@@ -23,12 +27,16 @@ class obj:
         self.gi = [int(pos[0]//obj.gfactor), int(pos[1]//obj.gfactor)]
         # self.isDead = False
         obj.grid[self.gi[0]][self.gi[1]].append(self)
+    def enemy(self) -> str:
+        if self.type == 'r': return 'p'
+        elif self.type == 'p': return 's'
+        elif self.type == 's': return 'r'
     def update(self, dt)->None:
         # if self.isDead == True:
         #     return
 
-        self.vel[0] += (0.5-random.random())*2000*dt
-        self.vel[1] += (0.5-random.random())*2000*dt
+        self.vel[0] += (0.5-random.random())*obj.randFactor*dt
+        self.vel[1] += (0.5-random.random())*obj.randFactor*dt
         self.pos += self.vel*dt
 
         if self.pos[0] < 10:
@@ -53,16 +61,24 @@ class obj:
         self.gi = [int(self.pos[0]//obj.gfactor), int(self.pos[1]//obj.gfactor)]
         obj.grid[self.gi[0]][self.gi[1]].append(self)
     
-    def convert(self)->None:
+    def convert(self, dt)->None:
         # if self.isDead == True:
         #     return
         for i in obj.neighbours:
             x = self.gi[0] + i[0]
             y = self.gi[1] + i[1]
             if 0<=x<obj.gLen[0] and 0<=y<obj.gLen[1]:
+                attraction = pygame.math.Vector2([(0.5-random.random()), (0.5-random.random())])
+                newA = pygame.math.Vector2([(0.5-random.random()), (0.5-random.random())])
                 for elem in obj.grid[x][y]:
                     if elem != self: #and elem.isDead == False:
-                        if (elem.pos-self.pos).magnitude() < obj.gfactor*0.75:
+                        newA= pygame.math.Vector2((elem.type==self.type)*((obj.afactor)/((elem.pos-self.pos).magnitude_squared() + obj.dmin)))
+                        newA = newA.rotate(newA.angle_to(elem.pos-self.pos))
+                        attraction += newA
+                        newA= 5*pygame.math.Vector2((elem.type==self.enemy())*((obj.afactor)/((elem.pos-self.pos).magnitude_squared() + obj.dmin)))
+                        newA = newA.rotate(newA.angle_to(self.pos-elem.pos))
+                        attraction += newA
+                        if (elem.pos-self.pos).magnitude() < obj.rfactor*0.75:
                             if self.type == 'r' and elem.type == 's':
                                 elem.type = 'r'
                                 # elem.isDead = True
@@ -72,15 +88,16 @@ class obj:
                             elif self.type == 's' and elem.type == 'p':
                                 elem.type = 's'
                                 # elem.isDead = True
+                self.vel += attraction*dt
     def blit(self)->None:
         # if self.isDead == True:
         #     return
         if self.type == 'r':
-            screen.blit(rock, [self.pos[0]-obj.gfactor*0.375, self.pos[1]-obj.gfactor*0.375])
+            screen.blit(rock, [self.pos[0]-obj.rfactor*0.375, self.pos[1]-obj.rfactor*0.375])
         elif self.type == 'p':
-            screen.blit(paper, [self.pos[0]-obj.gfactor*0.375, self.pos[1]-obj.gfactor*0.375])
+            screen.blit(paper, [self.pos[0]-obj.rfactor*0.375, self.pos[1]-obj.rfactor*0.375])
         elif self.type == 's':
-            screen.blit(scissor, [self.pos[0]-obj.gfactor*0.375, self.pos[1]-obj.gfactor*0.375])
+            screen.blit(scissor, [self.pos[0]-obj.rfactor*0.375, self.pos[1]-obj.rfactor*0.375])
 
 
         
@@ -96,9 +113,9 @@ def printpy(text:str,coords=(100,400),color=(128,128,128)):
     FoNtprint = FoNt.render(text,True,color)
     screen.blit(FoNtprint,coords)
 
-rock = pygame.transform.scale(pygame.image.load("images/rock.png"), [obj.gfactor*0.75, obj.gfactor*0.75])
-paper = pygame.transform.scale(pygame.image.load("images/paper.png"), [obj.gfactor*0.75, obj.gfactor*0.75])
-scissor = pygame.transform.scale(pygame.image.load("images/scissor.png"), [obj.gfactor*0.75, obj.gfactor*0.75])
+rock = pygame.transform.scale(pygame.image.load("images/rock.png"), [obj.rfactor*0.75, obj.rfactor*0.75])
+paper = pygame.transform.scale(pygame.image.load("images/paper.png"), [obj.rfactor*0.75, obj.rfactor*0.75])
+scissor = pygame.transform.scale(pygame.image.load("images/scissor.png"), [obj.rfactor*0.75, obj.rfactor*0.75])
 
 if __name__ == "__main__":
     frameRate = 1000
@@ -110,14 +127,14 @@ if __name__ == "__main__":
     #pygame.display.set_icon(icon)
     cls()
     objects = list()
-    for i in range(150):
-        objects.append(obj(random.choice(['r', 'p', 's']), [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
-    # for i in range(50):
-    #     objects.append(obj('r', [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
-    # for i in range(50):
-    #     objects.append(obj('p', [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
-    # for i in range(50):
-    #     objects.append(obj('s', [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
+    # for i in range(150):
+    #     objects.append(obj(random.choice(['r', 'p', 's']), [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
+    for i in range(50):
+        objects.append(obj('r', [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
+    for i in range(50):
+        objects.append(obj('p', [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
+    for i in range(50):
+        objects.append(obj('s', [random.random()*screenRes[0], random.random()*screenRes[1]], [(0.5-random.random())*50, (0.5-random.random())*50], 0))
     running = True
     clock = pygame.time.Clock()
     while running == True:
@@ -131,7 +148,7 @@ if __name__ == "__main__":
         for i in objects:
             i.blit()
             i.update(dt)
-            i.convert()
+            i.convert(dt)
 
         pygame.display.update()
         endTime = time.time()
