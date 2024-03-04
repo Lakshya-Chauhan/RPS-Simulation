@@ -3,16 +3,19 @@ from os import system
 import time
 import random
 screenRes = [1600, 1000]
+screenCenterVector = pygame.math.Vector2([screenRes[0]/2, screenRes[1]/2])
 class obj:
     neighbours = [[-1, -1], [-1, 0], [-1, 1],
                  [0, -1], [0, 0], [0, 1],
                  [1, -1], [1, 0], [1, 1]]
     gfactor = 200   #grid size factor
     rfactor = 40    #radius factor
-    afactor = 10069*10    #attraction factor
+    afactor = 10069*30    #attraction factor
     randFactor = 500  #2000   #randomness factor
+    centralAcc = 1234/1.5   #acceleration towards center
     dmin = 2.7569
     maxFriendlyToleration = rfactor*1.5
+    wallVelReduction = 0.9
     grid = list()
     gLen = [int(screenRes[0]//gfactor), int(screenRes[1]//gfactor)]
     velLimit = 300
@@ -45,6 +48,13 @@ class obj:
         self.vel[1] += (0.5-random.random())*obj.randFactor*dt
         self.vel += obj.accelType[self.type]*dt    #figured out the problem; its here
         
+        accel = pygame.math.Vector2(obj.centralAcc)
+        accel = accel.rotate(accel.angle_to(screenCenterVector-self.pos))
+
+        self.vel += accel*dt
+
+        # self.vel[1] += 981/4*dt
+        
         ratio = obj.velLimit/self.vel.magnitude()
         if ratio < 1:
             self.vel *= ratio
@@ -54,16 +64,20 @@ class obj:
         if self.pos[0] < 10:
             self.pos[0] = 11
             self.vel[0] = -self.vel[0]
+            self.vel *= obj.wallVelReduction
         elif self.pos[0] > screenRes[0]-10:
             self.pos[0] = screenRes[0]-11
             self.vel[0] = -self.vel[0]
+            self.vel *= obj.wallVelReduction
         
         if self.pos[1] < 10:
             self.pos[1] = 11
             self.vel[1] = -self.vel[1]
+            self.vel *= obj.wallVelReduction
         elif self.pos[1] > screenRes[1]-10:
             self.pos[1] = screenRes[1]-11
             self.vel[1] = -self.vel[1]
+            self.vel *= obj.wallVelReduction
         
         
         obj.grid[self.gi[0]][self.gi[1]].remove(self)
