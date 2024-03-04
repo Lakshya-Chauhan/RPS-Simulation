@@ -11,10 +11,16 @@ class obj:
     rfactor = 40    #radius factor
     afactor = 10069*10    #attraction factor
     randFactor = 500  #2000   #randomness factor
-    dmin = 2
+    dmin = 2.7569
+    maxFriendlyToleration = rfactor*1.5
     grid = list()
     gLen = [int(screenRes[0]//gfactor), int(screenRes[1]//gfactor)]
     velLimit = 300
+    accelType = {
+        'r' : pygame.math.Vector2([(0.5-random.random())*randFactor*50, (0.5-random.random())*randFactor*50]),
+        'p' : pygame.math.Vector2([(0.5-random.random())*randFactor*50, (0.5-random.random())*randFactor*50]),
+        's' : pygame.math.Vector2([(0.5-random.random())*randFactor*50, (0.5-random.random())*randFactor*50])
+    }
     for i in range(gLen[0]):
         grid.append(list())
         for j in range(gLen[1]):
@@ -37,6 +43,12 @@ class obj:
 
         self.vel[0] += (0.5-random.random())*obj.randFactor*dt
         self.vel[1] += (0.5-random.random())*obj.randFactor*dt
+        self.vel += obj.accelType[self.type]*dt    #figured out the problem; its here
+        
+        ratio = obj.velLimit/self.vel.magnitude()
+        if ratio < 1:
+            self.vel *= ratio
+
         self.pos += self.vel*dt
 
         if self.pos[0] < 10:
@@ -53,9 +65,6 @@ class obj:
             self.pos[1] = screenRes[1]-11
             self.vel[1] = -self.vel[1]
         
-        ratio = obj.velLimit/self.vel.magnitude()
-        if ratio < 1:
-            self.vel *= ratio
         
         obj.grid[self.gi[0]][self.gi[1]].remove(self)
         self.gi = [int(self.pos[0]//obj.gfactor), int(self.pos[1]//obj.gfactor)]
@@ -72,13 +81,21 @@ class obj:
                 newA = pygame.math.Vector2([(0.5-random.random()), (0.5-random.random())])
                 for elem in obj.grid[x][y]:
                     if elem != self: #and elem.isDead == False:
-                        newA= pygame.math.Vector2((elem.type==self.type)*((obj.afactor)/((elem.pos-self.pos).magnitude_squared() + obj.dmin)))
+                        dist = (elem.pos-self.pos).magnitude()
+                        newA= pygame.math.Vector2((elem.type==self.type)*((obj.afactor)/(dist*dist + obj.dmin)))
                         newA = newA.rotate(newA.angle_to(elem.pos-self.pos))
-                        attraction += newA
-                        newA= 5*pygame.math.Vector2((elem.type==self.enemy())*((obj.afactor)/((elem.pos-self.pos).magnitude_squared() + obj.dmin)))
+                        if dist > obj.maxFriendlyToleration:
+                            attraction += newA
+                        #if friendly particles are fare away they will attract; and if they come too near then they will repel; this would seem like collision but it isn't
+                        else:
+                            attraction -= newA*5
+                        newA= 15*pygame.math.Vector2((elem.type==self.enemy())*((obj.afactor)/(dist*dist + obj.dmin)))
                         newA = newA.rotate(newA.angle_to(self.pos-elem.pos))
                         attraction += newA
-                        if (elem.pos-self.pos).magnitude() < obj.rfactor*0.75:
+                        newA= 3*pygame.math.Vector2((elem.enemy()==self.type)*((obj.afactor)/(dist*dist + obj.dmin)))
+                        newA = newA.rotate(newA.angle_to(elem.pos-self.pos))
+                        attraction += newA
+                        if dist < obj.rfactor*0.75:
                             if self.type == 'r' and elem.type == 's':
                                 elem.type = 'r'
                                 # elem.isDead = True
@@ -112,7 +129,8 @@ def printpy(text:str,coords=(100,400),color=(128,128,128)):
     global FoNt,FoNtprint
     FoNtprint = FoNt.render(text,True,color)
     screen.blit(FoNtprint,coords)
-
+def sign(n):
+    return +1 if n>=0 else -1
 rock = pygame.transform.scale(pygame.image.load("images/rock.png"), [obj.rfactor*0.75, obj.rfactor*0.75])
 paper = pygame.transform.scale(pygame.image.load("images/paper.png"), [obj.rfactor*0.75, obj.rfactor*0.75])
 scissor = pygame.transform.scale(pygame.image.load("images/scissor.png"), [obj.rfactor*0.75, obj.rfactor*0.75])
@@ -145,6 +163,9 @@ if __name__ == "__main__":
                 running = False
         #Code Here
         screen.fill((10, 10, 10))
+        obj.accelType['r'] = pygame.math.Vector2([(0.5-random.random())*2000, (0.5-random.random())*2000])
+        obj.accelType['p'] = pygame.math.Vector2([(0.5-random.random())*2000, (0.5-random.random())*2000])
+        obj.accelType['s'] = pygame.math.Vector2([(0.5-random.random())*2000, (0.5-random.random())*2000])
         for i in objects:
             i.blit()
             i.update(dt)
