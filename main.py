@@ -171,7 +171,7 @@ if __name__ == "__main__":
     clock = pygame.time.Clock()
     while running == True:
         initTime = time.time()
-        clock.tick(frameRate)
+        clock.tick(frameRate*1.269)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
