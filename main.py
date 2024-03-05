@@ -1,9 +1,17 @@
 import pygame
+from pygame import mixer
 from os import system
 import time
 import random
 screenRes = [1600, 1000]
 screenCenterVector = pygame.math.Vector2([screenRes[0]/2, screenRes[1]/2])
+mixer.init()
+audio = {
+    "r" : mixer.Sound("audio/rock.mp3"),
+    "p" : mixer.Sound("audio/paper.mp3"),
+    "s" : mixer.Sound("audio/scissor.mp3")
+}
+soundON = True
 class obj:
     neighbours = [[-1, -1], [-1, 0], [-1, 1],
                  [0, -1], [0, 0], [0, 1],
@@ -112,12 +120,18 @@ class obj:
                         if dist < obj.rfactor*0.75:
                             if self.type == 'r' and elem.type == 's':
                                 elem.type = 'r'
+                                if soundON == True:
+                                    audio['r'].play()
                                 # elem.isDead = True
                             elif self.type == 'p' and elem.type == 'r':
                                 elem.type = 'p'
+                                if soundON == True:
+                                    audio['p'].play()
                                 # elem.isDead = True
                             elif self.type == 's' and elem.type == 'p':
                                 elem.type = 's'
+                                if soundON == True:
+                                    audio['s'].play()
                                 # elem.isDead = True
                 self.vel += attraction*dt
     def blit(self)->None:
@@ -173,6 +187,9 @@ if __name__ == "__main__":
         initTime = time.time()
         clock.tick(frameRate*1.269)
         for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                print(frameRate)
+                soundON = not soundON
             if event.type == pygame.QUIT:
                 running = False
         #Code Here
